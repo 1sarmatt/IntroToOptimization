@@ -1,0 +1,225 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cmath>
+
+std::vector<double> readObjectiveFunction() {
+  std::cout << "Enter the vector of coefficients of the objective function" << std::endl;
+  std::string vectorOfCoefficients;
+  std::getline(std::cin, vectorOfCoefficients);
+  std::vector<double> parsed;
+  std::string number = "";
+  for (char i : vectorOfCoefficients) {
+    if (isdigit(i) || i == '.' || i=='-') {
+      number += i;
+    } else {
+      parsed.push_back(std::stod(number));
+      number = "";
+    }
+  }
+  if (!number.empty()) {
+    parsed.push_back(std::stod(number));
+  }
+  return parsed;
+}
+
+std::vector<std::vector<double>>readConstraints(int numberOfCoefficients){
+  int numberOfConstraints;
+  std::cout<<"Enter the number of constraints"<<std::endl;
+  std::cin>>numberOfConstraints;
+  std::cout<<"Enter the matrix of coefficients of the constraint functions"<<std::endl;
+  std::vector<std::vector<double>> constraints;
+  std::vector<double> constraint;
+  for(int i=0;i<numberOfConstraints;i++) {
+    for (int j = 0; j < numberOfCoefficients; j++) {
+      double coefficient;
+      std::cin>>coefficient;
+      constraint.push_back(coefficient);
+    }
+    constraints.push_back(constraint);
+    constraint.clear();
+  }
+  return constraints;
+}
+
+std::vector<double> readRightHandSide(int numberOfElements){
+  std::cout<<"Enter the vector of right-hand side numbers\n";
+  std::vector<double> rightHandSide;
+  for(int i=0;i<numberOfElements;i++){
+    double element;
+    std::cin>>element;
+    rightHandSide.push_back(element);
+  }
+  return rightHandSide;
+}
+
+void printTheOptimizationProblem(std::vector<double> &objectiveFunction,  std::vector<std::vector<double>> &constraints,std::vector<double> &rightHandSide){
+  std::cout<<"The optimization problem is following:"<<std::endl<<"max z = ";
+  int temp=1;
+  for(double i:objectiveFunction){
+    if(temp==objectiveFunction.size())std::cout<<i<<" * x"<<temp<<std::endl;
+    else std::cout<<i<<" * x"<<temp<<" + ";
+    temp++;
+  }
+  std::cout<<"Subject to constraints:"<<std::endl;
+  for(int i=0;i<constraints.size(); i++){
+    temp=1;
+    for(int j=0;j<objectiveFunction.size();j++){
+      if(temp==objectiveFunction.size())std::cout<<constraints[i][j]<<" * x"<<temp<<" <= "<<rightHandSide[i]<<std::endl;
+      else std::cout<<constraints[i][j]<<" * x"<<temp<<" + ";
+      temp++;
+    }
+  }
+}
+
+std::vector<std::vector<double>> initialize(std::vector<double> &objectiveFunction,std::vector<std::vector<double>> &constraints,std::vector<double> &rightHandSide,int numberOfRows,int numberOfColumns,std::vector<std::string> &nonBasic,std::vector<std::string> &basic){
+  std::vector<std::vector<double>>  table(numberOfRows,std::vector<double>(numberOfColumns));
+  for(int i=0;i<objectiveFunction.size();i++){
+    table[0][i]=-objectiveFunction[i];
+    nonBasic[i]="x"+std::to_string(i+1);
+  }
+  for(int i=objectiveFunction.size();i<numberOfColumns;i++){
+    table[0][i]=0;
+    if(i!=numberOfColumns-1) {
+      nonBasic[i] = "s" + std::to_string(i - objectiveFunction.size() + 1);
+      basic[i - objectiveFunction.size()] = "s" + std::to_string(i - objectiveFunction.size() + 1);
+    }
+  }
+  for(int i=1;i<numberOfRows;i++){
+    for(int j=0;j<objectiveFunction.size();j++){
+      table[i][j]=constraints[i-1][j];
+    }
+    for(int j=objectiveFunction.size();j<numberOfColumns;j++){
+      if(j-objectiveFunction.size()+1==i)table[i][j]=1;
+      else table[i][j]=0;
+    }
+  }
+  for(int i=1;i<numberOfRows;i++){
+    table[i][numberOfColumns-1]=rightHandSide[i-1];
+  }
+  return table;
+}
+
+int findPivotColumn(std::vector<std::vector<double>> &table,int numberOfColumns){
+  int num=-1;
+  double min=INT_MAX;
+  for(int i=0;i<numberOfColumns-1;i++){
+    if(table[0][i]<min){
+      min=table[0][i];
+      num=i;
+    }
+  }
+  if(num==-1){
+    std::cout<<"Method is not applicable!"<<std::endl;
+    exit(0);
+  }
+  return num;
+}
+
+int findPivotRow(std::vector<std::vector<double>> &table,int numberOfRows,int numberOfColumns,int pivotColumn,double eps){
+  int num=-1;
+  double min=INT_MAX;
+  for(int i=1;i<numberOfRows;i++){
+    double ratio=table[i][numberOfColumns-1]/table[i][pivotColumn];
+    if(fabs(ratio)<eps)ratio=0;
+    if(ratio<min && ratio>0){
+      min=ratio;
+      num=i;
+    }
+  }
+  if(num==-1){
+    std::cout<<"Method is not applicable!"<<std::endl;
+    exit(0);
+  }
+  return num;
+}
+
+void performIteration(std::vector<std::vector<double>> &oldTable,int numberOfRows,int numberOfColumns, int pivotRow, int pivotColumn, double eps, std::vector<std::string> &nonBasic,std::vector<std::string> &basic){
+  std::vector<std::vector<double>> newTable=oldTable;
+  std::swap(nonBasic[pivotColumn],basic[pivotRow-1]);
+  for(int i=0;i<numberOfColumns;i++){
+    newTable[pivotRow][i]/=oldTable[pivotRow][pivotColumn];
+    if(fabs(newTable[pivotRow][i])<eps)newTable[pivotRow][i]=0;
+  }
+  for(int i=0;i<numberOfRows;i++){
+    if(i==pivotRow)continue;
+    for(int j=0;j<numberOfColumns;j++){
+      if(j==pivotColumn){
+        newTable[i][j]=0;
+      }
+      else{
+        newTable[i][j]=oldTable[i][j]-oldTable[i][pivotColumn]*newTable[pivotRow][j];
+        if(fabs(newTable[i][j])<eps)newTable[i][j]=0;
+      }
+    }
+  }
+  oldTable=newTable;
+}
+
+int checkOptimality(std::vector<std::vector<double>> &table, int numberOfColumns, std::vector<std::string>& nonBasic){
+  bool isUnbounded= true;
+  bool finish=true;
+  for(int i=0;i<numberOfColumns;i++){
+    if(table[0][i]<0){
+      finish=false;
+      break;
+    }
+  }
+  for(std::string coefficient:nonBasic){
+    if(coefficient[0]=='x'){
+      isUnbounded= false;
+      break;
+    }
+  }
+  if(finish)return 1;
+  if(isUnbounded)return -1;
+  return 0;
+}
+
+void printResult(std::vector<double> &objectiveFunction, std::vector<std::string>& basic,std::vector<std::vector<double>> &table,int numberOfColumns){
+  std::vector<double>optimalVariables(objectiveFunction.size());
+  for(int i=0;i<basic.size();i++){
+    if(basic[i][0]=='x'){
+      optimalVariables[basic[i][1]-'0'-1]=table[i+1][numberOfColumns-1];
+    }
+  }
+  std::cout<<"The problem is solved"<<std::endl<<"Maximum value of the objective function = " <<table[0][numberOfColumns-1]<<std::endl<<"Optimal vector of decision variables = ( ";
+  for(int i=0;i<optimalVariables.size();i++){
+    if(i==optimalVariables.size()-1) std::cout<<optimalVariables[i]<<"]"<<std::endl;
+    else std::cout<<optimalVariables[i]<<"; ";
+  }
+}
+
+void SimplexMethod(std::vector<double> &objectiveFunction,std::vector<std::vector<double>> &constraints,std::vector<double> &rightHandSide, double eps=0.0001){
+  int numberOfRows=constraints.size()+1;
+  int numberOfColumns=objectiveFunction.size()+constraints.size()+1;
+  bool isUnbounded=false;
+  std::vector<std::string> nonBasic(numberOfColumns-1);
+  std::vector<std::string> basic(numberOfRows-1);
+  std::vector<std::vector<double>> table= initialize(objectiveFunction,constraints,rightHandSide,numberOfRows,numberOfColumns,nonBasic,basic);
+    while (true) {
+      int pivotColumn = findPivotColumn(table, numberOfColumns);
+      int pivotRow = findPivotRow(table, numberOfRows, numberOfColumns, pivotColumn, eps);
+      performIteration(table, numberOfRows, numberOfColumns, pivotRow, pivotColumn, eps, nonBasic, basic);
+      int optimality = checkOptimality(table, numberOfColumns, nonBasic);
+      if (optimality == 1) {
+        break;
+      } else if (optimality == -1) {
+        isUnbounded = true;
+        break;
+      }
+    }
+  if(isUnbounded){
+    std::cout<<"The function is unbounded"<<std::endl;
+    return;
+  }
+  printResult(objectiveFunction,basic,table,numberOfColumns);
+}
+
+int main() {
+  std::vector<double> objectiveFunction = readObjectiveFunction();
+  std::vector<std::vector<double>> constraints= readConstraints(objectiveFunction.size());
+  std::vector<double> rightHandSide= readRightHandSide(constraints.size());
+  printTheOptimizationProblem(objectiveFunction,constraints,rightHandSide);
+  SimplexMethod(objectiveFunction,constraints,rightHandSide);
+}
