@@ -183,32 +183,32 @@ void printResult(std::vector<double> &objectiveFunction, std::vector<std::string
       optimalVariables[basic[i][1]-'0'-1]=table[i+1][numberOfColumns-1];
     }
   }
-  std::cout<<"The problem is solved"<<std::endl<<"Maximum value of the objective function = " <<table[0][numberOfColumns-1]<<std::endl<<"Optimal vector of decision variables = ( ";
+  std::cout<<"The problem is solved"<<std::endl<<"Maximum value of the objective function = " <<table[0][numberOfColumns-1]<<std::endl<<"Optimal vector of decision variables = (";
   for(int i=0;i<optimalVariables.size();i++){
-    if(i==optimalVariables.size()-1) std::cout<<optimalVariables[i]<<"]"<<std::endl;
+    if(i==optimalVariables.size()-1) std::cout<<optimalVariables[i]<<")"<<std::endl;
     else std::cout<<optimalVariables[i]<<"; ";
   }
 }
 
-void SimplexMethod(std::vector<double> &objectiveFunction,std::vector<std::vector<double>> &constraints,std::vector<double> &rightHandSide, double eps=0.0001){
+void SimplexMethod(std::vector<double> &objectiveFunction,std::vector<std::vector<double>> &constraints,std::vector<double> &rightHandSide, double eps){
   int numberOfRows=constraints.size()+1;
   int numberOfColumns=objectiveFunction.size()+constraints.size()+1;
   bool isUnbounded=false;
   std::vector<std::string> nonBasic(numberOfColumns-1);
   std::vector<std::string> basic(numberOfRows-1);
   std::vector<std::vector<double>> table= initialize(objectiveFunction,constraints,rightHandSide,numberOfRows,numberOfColumns,nonBasic,basic);
-    while (true) {
-      int pivotColumn = findPivotColumn(table, numberOfColumns);
-      int pivotRow = findPivotRow(table, numberOfRows, numberOfColumns, pivotColumn, eps);
-      performIteration(table, numberOfRows, numberOfColumns, pivotRow, pivotColumn, eps, nonBasic, basic);
-      int optimality = checkOptimality(table, numberOfColumns, nonBasic);
-      if (optimality == 1) {
-        break;
-      } else if (optimality == -1) {
-        isUnbounded = true;
-        break;
-      }
+  while (true) {
+    int pivotColumn = findPivotColumn(table, numberOfColumns);
+    int pivotRow = findPivotRow(table, numberOfRows, numberOfColumns, pivotColumn, eps);
+    performIteration(table, numberOfRows, numberOfColumns, pivotRow, pivotColumn, eps, nonBasic, basic);
+    int optimality = checkOptimality(table, numberOfColumns, nonBasic);
+    if (optimality == 1) {
+      break;
+    } else if (optimality == -1) {
+      isUnbounded = true;
+      break;
     }
+  }
   if(isUnbounded){
     std::cout<<"The function is unbounded"<<std::endl;
     return;
@@ -220,6 +220,9 @@ int main() {
   std::vector<double> objectiveFunction = readObjectiveFunction();
   std::vector<std::vector<double>> constraints= readConstraints(objectiveFunction.size());
   std::vector<double> rightHandSide= readRightHandSide(constraints.size());
+  double eps;
+  std::cout<<"Enter the approximation accuracy"<<std::endl;
+  std::cin>>eps;
   printTheOptimizationProblem(objectiveFunction,constraints,rightHandSide);
-  SimplexMethod(objectiveFunction,constraints,rightHandSide);
+  SimplexMethod(objectiveFunction,constraints,rightHandSide, eps);
 }
