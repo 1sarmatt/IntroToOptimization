@@ -1,0 +1,292 @@
+#include <iostream>
+#include <vector>
+
+std::vector<int> readCoefficientsOfSupply() {
+  std::cout << "Enter a vector of coefficients of supply" << std::endl;
+  std::vector<int> coefficientsOfSupply;
+  for (int i = 0; i < 3; i++) {
+    int source;
+    std::cin >> source;
+    coefficientsOfSupply.push_back(source);
+  }
+  return coefficientsOfSupply;
+}
+
+std::vector<std::vector<int>> readMatrixOfCoefficientsOfCosts() {
+  std::cout << "Enter a matrix of coefficients of costs" << std::endl;
+  std::vector<std::vector<int>> coefficientsOfCosts;
+  for (int i = 0; i < 3; i++) {
+    std::vector<int> costs;
+    for (int j = 0; j < 4; j++) {
+      int cost;
+      std::cin >> cost;
+      costs.push_back(cost);
+    }
+    coefficientsOfCosts.push_back(costs);
+  }
+  return coefficientsOfCosts;
+}
+
+std::vector<int> readCoefficientsOfDemand() {
+  std::cout << "Enter a vector of coefficients of demand" << std::endl;
+  std::vector<int> coefficientsOfDemand;
+  for (int i = 0; i < 4; i++) {
+    int demand;
+    std::cin >> demand;
+    coefficientsOfDemand.push_back(demand);
+  }
+  return coefficientsOfDemand;
+}
+
+bool isBalanced(std::vector<int> &coefficientsOfSupply, std::vector<int> &coefficientOfDemand) {
+  int sumOfDemand = 0;
+  int sumOfSupply = 0;
+  for (int element : coefficientsOfSupply) {
+    sumOfSupply += element;
+  }
+  for (int element : coefficientOfDemand) {
+    sumOfDemand += element;
+  }
+  if (sumOfDemand == sumOfSupply) return true;
+  return false;
+}
+
+void printTable(std::vector<int> &supply, std::vector<std::vector<int>> &costs, std::vector<int> &demand) {
+  int m = (int) supply.size();
+  int n = (int) demand.size();
+  std::cout << "Parameter table for the transportation problem" << std::endl;
+  std::cout << "     Cost per Unit Distributed" << std::endl;
+  std::cout << "            Destination" << std::endl;
+  std::cout << "         ";
+  for (int j = 1; j <= n; ++j) {
+    std::cout << "  " << j << "   ";
+  }
+  std::cout << " Supply" << std::endl;
+
+  for (int i = 0; i < m; ++i) {
+    std::cout << "Source " << i + 1 << " ";
+    for (int j = 0; j < n; ++j) {
+      std::cout << "  " << costs[i][j] << "   ";
+    }
+    std::cout << " " << supply[i] << std::endl;
+  }
+
+  std::cout << "Demand  ";
+  for (int j = 0; j < n; ++j) {
+    std::cout << "  " << demand[j] << " ";
+  }
+  std::cout << std::endl;
+}
+
+void northWestCornerMethod(std::vector<int> supply, std::vector<int> demand) {
+  std::cout << "Nort-West corner Method:" << std::endl;
+  int basicSolution[3][4] = {};
+  int column = 0;
+  int row = 0;
+  while (column < 4 && row < 3) {
+    if (supply[row] > demand[column]) {
+      basicSolution[row][column] = demand[column];
+      supply[row] -= demand[column];
+      demand[column] = 0;
+      column++;
+    } else if (supply[row] == demand[column]) {
+      basicSolution[row][column] = demand[column];
+      supply[row] = 0;
+      demand[column] = 0;
+      row++;
+      column++;
+    } else {
+      basicSolution[row][column] = supply[row];
+      demand[column] -= supply[row];
+      supply[row] = 0;
+      row++;
+    }
+  }
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 4; j++) {
+      std::cout << basicSolution[i][j] << " ";
+    }
+    std::cout << std::endl;
+  }
+}
+
+int getVectorSum(std::vector<int> &vector) {
+  int sum = 0;
+  for (int element : vector) {
+    sum += element;
+  }
+  return sum;
+}
+
+void vogelMethod(std::vector<int> supply, std::vector<std::vector<int>> costs, std::vector<int> demand) {
+  std::cout << "Vogel's method" << std::endl;
+  int basicSolution[3][4] = {};
+  while (getVectorSum(demand) != 0) {
+    int pivotPositionRow;
+    int pivotPositionColumn;
+    int largestDifference = -1;
+    bool largestInRow;
+    int largestPosition;
+    for (int i = 0; i < 3; i++) {
+      int firstSmallest = INT_MAX;
+      int secondSmallest = INT_MAX;
+      if (supply[i] != 0) {
+        for (int j = 0; j < 4; j++) {
+          if (demand[j] != 0) {
+            if (costs[i][j] < firstSmallest) {
+              secondSmallest = firstSmallest;
+              firstSmallest = costs[i][j];
+            } else if (costs[i][j] < secondSmallest) {
+              secondSmallest = costs[i][j];
+            }
+          }
+        }
+        if (secondSmallest - firstSmallest > largestDifference) {
+          largestPosition = i;
+          largestInRow = true;
+          largestDifference = secondSmallest - firstSmallest;
+        }
+      }
+    }
+    for (int i = 0; i < 4; i++) {
+      int firstSmallest = INT_MAX;
+      int secondSmallest = INT_MAX;
+      if (demand[i] != 0) {
+        for (int j = 0; j < 3; j++) {
+          if (supply[j] != 0) {
+            if (costs[j][i] < firstSmallest) {
+              secondSmallest = firstSmallest;
+              firstSmallest = costs[j][i];
+            } else if (costs[j][i] < secondSmallest) {
+              secondSmallest = costs[j][i];
+            }
+          }
+        }
+        if (secondSmallest - firstSmallest > largestDifference) {
+          largestPosition = i;
+          largestInRow = false;
+          largestDifference = secondSmallest - firstSmallest;
+        }
+      }
+    }
+    int MinimalCost = INT_MAX;
+    if (largestInRow) {
+      for (int i = 0; i < 4; i++) {
+        if (costs[largestPosition][i] < MinimalCost && supply[largestPosition] != 0 && demand[i] != 0) {
+          MinimalCost = costs[largestPosition][i];
+          pivotPositionRow = largestPosition;
+          pivotPositionColumn = i;
+        }
+      }
+    } else {
+      for (int i = 0; i < 3; i++) {
+        if (costs[i][largestPosition] < MinimalCost && supply[i] != 0 && demand[largestPosition] != 0) {
+          MinimalCost = costs[i][largestPosition];
+          pivotPositionRow = i;
+          pivotPositionColumn = largestPosition;
+        }
+      }
+    }
+    if (supply[pivotPositionRow] > demand[pivotPositionColumn]) {
+      basicSolution[pivotPositionRow][pivotPositionColumn] = demand[pivotPositionColumn];
+      supply[pivotPositionRow] -= demand[pivotPositionColumn];
+      demand[pivotPositionColumn] = 0;
+    } else if (supply[pivotPositionRow] == demand[pivotPositionColumn]) {
+      basicSolution[pivotPositionRow][pivotPositionColumn] = demand[pivotPositionColumn];
+      supply[pivotPositionRow] = 0;
+      demand[pivotPositionColumn] = 0;
+    } else {
+      basicSolution[pivotPositionRow][pivotPositionColumn] = supply[pivotPositionRow];
+      demand[pivotPositionColumn] -= supply[pivotPositionRow];
+      supply[pivotPositionRow] = 0;
+    }
+  }
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 4; j++) {
+      std::cout << basicSolution[i][j] << " ";
+    }
+    std::cout << std::endl;
+  }
+}
+
+void russelMethod(std::vector<int> supply, std::vector<std::vector<int>> costs, std::vector<int> demand) {
+  std::cout << "Russel's method" << std::endl;
+  int basicSolution[3][4] = {};
+  bool isSelected[3][4];
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 4; j++) {
+      isSelected[i][j] = false;
+    }
+  }
+  int largestRowUnits[3];
+  int largestColumnUnits[4];
+  for (int i = 0; i < 3; i++) {
+    int largestRowUnit = -1;
+    for (int j = 0; j < 4; j++) {
+      largestRowUnit = std::max(largestRowUnit, costs[i][j]);
+    }
+    largestRowUnits[i] = largestRowUnit;
+  }
+  for (int i = 0; i < 4; i++) {
+    int largestColumnUnit = -1;
+    for (int j = 0; j < 3; j++) {
+      largestColumnUnit = std::max(largestColumnUnit, costs[j][i]);
+    }
+    largestColumnUnits[i] = largestColumnUnit;
+  }
+  while (getVectorSum(demand) != 0) {
+    int delta[3][4];
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        if (!isSelected[i][j]) delta[i][j] = costs[i][j] - largestRowUnits[i] - largestColumnUnits[j];
+        else delta[i][j] = INT_MAX;
+      }
+    }
+    int minimum = INT_MAX;
+    int selectedRow;
+    int selectedColumn;
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        if (delta[i][j] < minimum) {
+          minimum = delta[i][j];
+          selectedRow = i;
+          selectedColumn = j;
+        }
+      }
+    }
+    isSelected[selectedRow][selectedColumn] = true;
+    if (supply[selectedRow] > demand[selectedColumn]) {
+      basicSolution[selectedRow][selectedColumn] = demand[selectedColumn];
+      supply[selectedRow] -= demand[selectedColumn];
+      demand[selectedColumn] = 0;
+    } else if (supply[selectedRow] == demand[selectedColumn]) {
+      basicSolution[selectedRow][selectedColumn] = demand[selectedColumn];
+      supply[selectedRow] = 0;
+      demand[selectedColumn] = 0;
+    } else {
+      basicSolution[selectedRow][selectedColumn] = supply[selectedRow];
+      demand[selectedColumn] -= supply[selectedRow];
+      supply[selectedRow] = 0;
+    }
+  }
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 4; j++) {
+      std::cout << basicSolution[i][j] << " ";
+    }
+    std::cout << std::endl;
+  }
+}
+
+int main() {
+  std::vector<int> coefficientsOfSupply = readCoefficientsOfSupply();
+  std::vector<std::vector<int>> coefficientsOfCosts = readMatrixOfCoefficientsOfCosts();
+  std::vector<int> coefficientsOfDemand = readCoefficientsOfDemand();
+  if (!isBalanced(coefficientsOfSupply, coefficientsOfDemand)) {
+    std::cout << "The problem is not balanced!" << std::endl;
+    return 0;
+  }
+  printTable(coefficientsOfSupply, coefficientsOfCosts, coefficientsOfDemand);
+  northWestCornerMethod(coefficientsOfSupply, coefficientsOfDemand);
+  vogelMethod(coefficientsOfSupply, coefficientsOfCosts, coefficientsOfDemand);
+  russelMethod(coefficientsOfSupply, coefficientsOfCosts, coefficientsOfDemand);
+}
